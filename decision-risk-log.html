@@ -1,0 +1,1421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content="#0B1220">
+<title>Decision &amp; Risk Log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+<style>
+  :root{
+    --bg:#0B1220; --panel:#0E1729; --card:#111c30; --card-2:#16223a;
+    --border:#1f2c44; --border-strong:#2b3a57;
+    --text:#E6EDF7; --text-2:#9fb0c9; --muted:#6b7d99;
+    --accent:#38BDF8; --accent-2:#7DD3FC; --accent-3:#0ea5e9;
+    --ok:#34D399; --warn:#FBBF24; --crit:#F87171;
+    --shadow-2:0 10px 30px rgba(0,0,0,0.35); --radius:14px; --radius-sm:9px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased;
+  }
+  button,input,select,textarea{font-family:inherit; color:inherit}
+  ::selection{background:rgba(56,189,248,0.35)}
+  a{color:var(--accent-2)}
+
+  #app{display:grid; grid-template-columns:264px 1fr; grid-template-rows:auto 1fr auto; height:100vh;
+       grid-template-areas:"header header" "sidebar main" "footer footer";}
+
+  header{grid-area:header; display:flex; align-items:center; gap:16px; padding:10px 18px;
+    background:var(--panel); border-bottom:1px solid var(--border);}
+  header .brand{display:flex; align-items:center; gap:10px; font-weight:700; font-size:16px; letter-spacing:0.2px}
+  header .brand i{color:var(--accent)}
+  .header-right{margin-left:auto; display:flex; align-items:center; gap:8px}
+  .stats{display:flex; gap:14px; margin-right:8px}
+  .stat{display:flex; flex-direction:column; align-items:center; min-width:46px}
+  .stat .val{font-weight:700; font-size:15px}
+  .stat.accent .val{color:var(--accent)}
+  .stat .lbl{font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.6px}
+
+  .file-chip{display:flex; align-items:center; gap:8px; background:var(--card); border:1px solid var(--border);
+    border-radius:8px; padding:7px 11px; cursor:pointer; color:var(--text-2); max-width:280px}
+  .file-chip:hover{border-color:var(--border-strong)}
+  .file-chip.dirty{border-color:var(--warn)}
+  .file-chip .fc-name{white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:200px; font-size:12.5px}
+  .file-chip .fc-name.no-file{color:var(--muted)}
+  .file-chip .fc-dirty{width:7px; height:7px; border-radius:50%; background:var(--warn); display:none}
+  .file-chip.dirty .fc-dirty{display:block}
+
+  .header-btn{width:36px; height:36px; display:grid; place-items:center; background:var(--card);
+    border:1px solid var(--border); border-radius:9px; cursor:pointer; color:var(--text-2); font-size:14px}
+  .header-btn:hover{background:var(--accent); color:#04101F; border-color:var(--accent)}
+
+  aside.sidebar{grid-area:sidebar; background:var(--panel); border-right:1px solid var(--border);
+    overflow-y:auto; padding:14px 12px;}
+  .side-section{margin-bottom:18px}
+  .side-section h3{margin:0 0 8px 2px; font-size:10.5px; text-transform:uppercase; letter-spacing:1px; color:var(--muted)}
+  .nav-item{display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:9px; cursor:pointer;
+    color:var(--text-2); font-size:13.5px; margin-bottom:2px}
+  .nav-item i{width:16px; text-align:center}
+  .nav-item:hover{background:var(--card)}
+  .nav-item.active{background:var(--card-2); color:var(--text); font-weight:600}
+  .nav-item .count{margin-left:auto; font-size:11px; color:var(--muted); background:var(--card);
+    padding:1px 7px; border-radius:9px}
+  .nav-item.active .count{background:var(--panel)}
+
+  .chip-row{display:flex; flex-wrap:wrap; gap:6px}
+  .chip{font-size:11px; padding:3px 9px; border-radius:11px; cursor:pointer; border:1px solid transparent; user-select:none}
+  .chip.off{opacity:0.4}
+  .chip.s-accepted{background:rgba(52,211,153,0.16); color:#6ee7b7}
+  .chip.s-proposed{background:rgba(251,191,36,0.16); color:#fcd34d}
+  .chip.s-superseded{background:rgba(248,113,113,0.16); color:#fca5a5}
+  .chip.s-rejected{background:rgba(107,125,153,0.18); color:#aab8d0}
+  .chip.tag{background:var(--card); color:var(--text-2)}
+  .chip.tag.on{background:var(--accent); color:#04101F}
+
+  main{grid-area:main; overflow-y:auto; padding:20px 24px}
+  .view-head{display:flex; align-items:center; gap:12px; margin-bottom:16px}
+  .view-head h1{margin:0; font-size:20px; font-weight:700}
+  .view-head .sub{color:var(--muted); font-size:13px}
+  .view-head .actions{margin-left:auto; display:flex; gap:8px}
+
+  .btn{display:inline-flex; align-items:center; gap:7px; background:var(--card); border:1px solid var(--border);
+    color:var(--text); border-radius:9px; padding:8px 13px; cursor:pointer; font-size:13px}
+  .btn:hover{border-color:var(--border-strong); background:var(--card-2)}
+  .btn.primary{background:var(--accent); color:#04101F; border-color:var(--accent); font-weight:600}
+  .btn.primary:hover{background:var(--accent-2)}
+  .btn.ghost{background:transparent}
+  .btn.danger{color:var(--crit); border-color:rgba(248,113,113,0.4)}
+  .btn.danger:hover{background:rgba(248,113,113,0.12)}
+  .btn.sm{padding:5px 9px; font-size:12px}
+  .btn:disabled{opacity:0.4; cursor:not-allowed}
+  .sr-only{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0}
+  :focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:4px}
+  .nav-item:focus-visible,.chip:focus-visible,.cell:focus-visible,.risk-row:focus-visible,tr.row:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
+  .cell:focus-visible{outline-offset:2px}
+
+  table.list{width:100%; border-collapse:collapse}
+  table.list th{text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:0.8px;
+    color:var(--muted); padding:6px 10px; border-bottom:1px solid var(--border); font-weight:600}
+  table.list td{padding:11px 10px; border-bottom:1px solid var(--border); vertical-align:top}
+  table.list tr.row{cursor:pointer}
+  table.list tr.row:hover td{background:var(--card)}
+  .rec-id{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace; color:var(--accent-2); font-weight:600; font-size:12.5px; white-space:nowrap}
+  .rec-title{font-weight:600; font-size:14px}
+  .rec-title.struck{text-decoration:line-through; color:var(--muted); font-weight:400}
+  .rec-meta{color:var(--muted); font-size:11.5px; margin-top:3px}
+  .col-status{white-space:nowrap}
+  .col-owner,.col-upd{color:var(--text-2); font-size:12.5px; white-space:nowrap}
+
+  .badge{display:inline-flex; align-items:center; gap:5px; font-size:11px; padding:3px 9px; border-radius:11px; font-weight:600}
+  .badge i{font-size:10px}
+  .b-accepted{background:rgba(52,211,153,0.16); color:#6ee7b7}
+  .b-proposed{background:rgba(251,191,36,0.16); color:#fcd34d}
+  .b-superseded{background:rgba(248,113,113,0.16); color:#fca5a5}
+  .b-rejected{background:rgba(107,125,153,0.18); color:#aab8d0}
+  .b-open{background:rgba(248,113,113,0.16); color:#fca5a5}
+  .b-mitigating{background:rgba(251,191,36,0.16); color:#fcd34d}
+  .b-accepted-risk{background:rgba(56,189,248,0.16); color:var(--accent-2)}
+  .b-closed{background:rgba(52,211,153,0.16); color:#6ee7b7}
+
+  .tagline{display:inline-flex; gap:5px; flex-wrap:wrap; margin-top:5px}
+  .tagline .t{font-size:10.5px; background:var(--card-2); color:var(--text-2); padding:1px 7px; border-radius:8px}
+
+  .empty{display:flex; flex-direction:column; align-items:center; justify-content:center; height:60%;
+    color:var(--muted); text-align:center; gap:12px}
+  .empty .glyph{width:60px; height:60px; border-radius:16px; display:grid; place-items:center; font-size:24px;
+    background:linear-gradient(135deg,rgba(56,189,248,0.15),rgba(125,211,252,0.12)); border:1px solid var(--border); color:var(--accent)}
+
+  /* detail */
+  .detail{max-width:760px}
+  .detail .d-id{font-family:"SF Mono",ui-monospace,monospace; color:var(--accent-2); font-weight:600}
+  .detail h1{margin:8px 0 10px; font-size:24px; line-height:1.25}
+  .d-section{margin:18px 0}
+  .d-section h4{margin:0 0 6px; font-size:10.5px; text-transform:uppercase; letter-spacing:1px; color:var(--muted)}
+  .d-section p{margin:0; color:var(--text-2); white-space:pre-wrap}
+  .d-options{list-style:none; padding:0; margin:0}
+  .d-options li{padding:6px 0; color:var(--text-2); border-bottom:1px solid var(--border)}
+  .d-options li .pick{color:var(--ok); font-weight:600; margin-left:6px}
+  .d-options li .rej{color:var(--muted); margin-left:6px}
+  .linkrec{display:inline-flex; align-items:center; gap:6px; background:var(--card); border:1px solid var(--border);
+    border-radius:8px; padding:5px 10px; margin:0 6px 6px 0; cursor:pointer; font-size:12px; color:var(--text-2)}
+  .linkrec:hover{border-color:var(--accent); color:var(--text)}
+  .d-foot{display:flex; gap:8px; margin-top:22px; padding-top:16px; border-top:1px solid var(--border)}
+
+  /* risk matrix */
+  .matrix-wrap{display:flex; gap:28px; flex-wrap:wrap; align-items:flex-start}
+  .matrix{display:grid; grid-template-columns:auto repeat(5,58px); grid-auto-rows:50px; gap:0;
+    align-items:center}
+  .matrix .axis-l{grid-column:1; font-size:10.5px; color:var(--muted); text-align:right; padding-right:8px; white-space:nowrap}
+  .matrix .cell{border:1px solid var(--bg); border-radius:6px; height:46px; position:relative; cursor:pointer; display:grid; place-items:center}
+  .matrix .cell:hover{outline:2px solid var(--accent)}
+  .matrix .cell .dot{width:26px; height:26px; border-radius:50%; display:grid; place-items:center;
+    font-size:11px; font-weight:700; color:#04101F; border:2px solid var(--bg)}
+  .matrix .colhead{font-size:10.5px; color:var(--muted); text-align:center}
+  .matrix-axislabel{font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin:4px 0}
+
+  .risk-list{flex:1; min-width:300px}
+  .risk-row{display:flex; align-items:center; gap:10px; padding:9px 4px; border-bottom:1px solid var(--border); cursor:pointer}
+  .risk-row:hover{background:var(--card)}
+  .risk-dot{width:11px; height:11px; border-radius:50%; flex:none}
+  .risk-row .rid{font-family:"SF Mono",ui-monospace,monospace; color:var(--accent-2); font-size:12px; font-weight:600; white-space:nowrap}
+  .risk-row .rtitle{flex:1; font-size:13px}
+  .risk-row .rscore{font-family:"SF Mono",ui-monospace,monospace; font-size:11.5px; color:var(--muted); white-space:nowrap}
+  .risk-row .rowner{font-size:11.5px; color:var(--text-2); white-space:nowrap; min-width:80px; text-align:right}
+  .noowner{color:var(--warn)}
+
+  /* modal */
+  .modal-backdrop{position:fixed; inset:0; background:rgba(4,10,20,0.6); backdrop-filter:blur(3px);
+    display:none; align-items:center; justify-content:center; z-index:50; padding:24px}
+  .modal-backdrop.open{display:flex}
+  .modal{background:var(--panel); border:1px solid var(--border-strong); border-radius:var(--radius);
+    width:100%; max-width:620px; max-height:88vh; display:flex; flex-direction:column; box-shadow:var(--shadow-2)}
+  .modal.wide{max-width:760px}
+  .modal-head{display:flex; align-items:center; padding:16px 20px; border-bottom:1px solid var(--border)}
+  .modal-head h3{margin:0; font-size:16px}
+  .modal-close{margin-left:auto; background:none; border:none; color:var(--muted); cursor:pointer; font-size:16px}
+  .modal-close:hover{color:var(--text)}
+  .modal-body{padding:18px 20px; overflow-y:auto}
+  .modal-foot{display:flex; gap:8px; justify-content:flex-end; padding:14px 20px; border-top:1px solid var(--border)}
+
+  .field{margin-bottom:13px}
+  .field label{display:block; font-size:11.5px; color:var(--text-2); margin-bottom:5px; font-weight:500}
+  .field input[type=text],.field textarea,.field select{
+    width:100%; background:var(--card); border:1px solid var(--border); border-radius:8px;
+    padding:9px 11px; color:var(--text); font-size:13.5px}
+  .field input:focus,.field textarea:focus,.field select:focus{outline:none; border-color:var(--accent)}
+  .field textarea{resize:vertical; min-height:62px}
+  .field .hint{font-size:11px; color:var(--muted); margin-top:4px}
+  .field-row{display:flex; gap:12px}
+  .field-row .field{flex:1}
+
+  .toast{position:fixed; bottom:22px; left:50%; transform:translateX(-50%) translateY(20px); opacity:0;
+    background:var(--card-2); border:1px solid var(--border-strong); color:var(--text);
+    padding:11px 18px; border-radius:10px; font-size:13px; z-index:80; transition:all 0.25s; box-shadow:var(--shadow-2);
+    display:flex; align-items:center; gap:9px}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+  .toast.ok i{color:var(--ok)} .toast.err i{color:var(--crit)}
+
+  footer{grid-area:footer; display:flex; align-items:center; gap:16px; padding:7px 18px;
+    background:var(--panel); border-top:1px solid var(--border); font-size:11.5px; color:var(--muted)}
+  footer .foot-credit{display:flex; align-items:center; gap:7px}
+  footer .foot-credit a{color:var(--text-2); text-decoration:none; display:inline-flex; align-items:center; gap:5px}
+  footer .foot-credit a:hover{color:var(--accent)}
+  footer .right{margin-left:auto}
+  .status-dot{width:7px; height:7px; border-radius:50%; background:var(--ok); display:inline-block; margin-right:6px}
+
+  .search-box{position:relative}
+  .search-box i{position:absolute; left:11px; top:50%; transform:translateY(-50%); color:var(--muted); font-size:12px}
+  .search-box input{width:100%; background:var(--card); border:1px solid var(--border); border-radius:9px;
+    padding:8px 11px 8px 30px; color:var(--text); font-size:13px}
+  .search-box input:focus{outline:none; border-color:var(--accent)}
+
+  @media (max-width:820px){
+    #app{grid-template-columns:1fr; grid-template-areas:"header" "main" "footer"}
+    aside.sidebar{display:none}
+  }
+  /* needs-review / badges */
+  .badge.b-stale{background:rgba(251,191,36,0.16); color:#fcd34d}
+  .review-group{margin-bottom:20px}
+  .review-group h2{font-size:14px; margin:0 0 8px; color:var(--text)}
+  /* timeline */
+  .lineage{margin-bottom:22px; border-left:1px solid var(--border); padding-left:0}
+  .tl-item{position:relative; padding:10px 0 10px 26px; cursor:pointer}
+  .tl-item::before{content:""; position:absolute; left:-4px; top:16px; width:9px; height:9px; border-radius:50%; background:var(--accent); border:2px solid var(--panel)}
+  .tl-item.sup::before{background:var(--muted)}
+  .tl-item:hover .tl-title{color:var(--accent-2)}
+  .tl-title{font-weight:600; font-size:13.5px}
+  .tl-title.struck{text-decoration:line-through; color:var(--muted); font-weight:400}
+  .tl-meta{font-size:11.5px; color:var(--muted); margin-top:2px}
+  .tl-arrow{color:var(--muted); font-size:11px; margin:2px 0 2px 26px}
+  /* trend */
+  .trend-kpis{display:flex; gap:12px; flex-wrap:wrap; margin-bottom:18px}
+  .kpi{background:var(--card); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px 16px; min-width:120px}
+  .kpi .v{font-size:24px; font-weight:700}
+  .kpi .l{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.6px; margin-top:2px}
+  .trend-chart{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:18px; max-width:760px}
+  .trend-empty{color:var(--muted); font-size:13px}
+  /* saved views list */
+  .sv-item{display:flex; align-items:center; gap:8px; padding:6px 9px; border-radius:8px; cursor:pointer; font-size:12.5px; color:var(--text-2)}
+  .sv-item:hover{background:var(--card)}
+  .sv-item .sv-name{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .sv-item .sv-del{color:var(--muted); cursor:pointer}
+  .sv-item .sv-del:hover{color:var(--crit)}
+  .sv-empty{font-size:11px; color:var(--muted); padding:2px 9px}
+
+  @media print {
+    @page { margin: 1.5cm; }
+    :root{ --bg:#fff; --panel:#fff; --card:#fff; --card-2:#f3f4f6; --border:#d1d5db; --border-strong:#9ca3af;
+           --text:#111827; --text-2:#374151; --muted:#6b7280; --accent:#1d4ed8; --accent-2:#1d4ed8; }
+    body{ background:#fff; color:#111827 }
+    #app{ display:block; height:auto }
+    header,aside.sidebar,footer,.view-head .actions,#btn-print,.toast,.modal-backdrop{ display:none !important }
+    main{ overflow:visible; padding:0 }
+    .badge,.chip{ border:1px solid #999 !important }
+    table.list td,table.list th{ border-color:#ccc }
+    .trend-chart,.kpi{ border-color:#ccc }
+    a{ color:#1d4ed8 }
+    .print-only{ display:block !important }
+  }
+  .print-only{ display:none }
+</style>
+</head>
+<body>
+<div id="app">
+  <header role="banner">
+    <div class="brand"><i class="fa-solid fa-scale-balanced" aria-hidden="true"></i> Decision &amp; Risk Log</div>
+    <div class="header-right">
+      <div class="stats" role="group" aria-label="Summary counts">
+        <div class="stat"><span class="val" id="stat-dec">0</span><span class="lbl">Decisions</span></div>
+        <div class="stat"><span class="val" id="stat-risk">0</span><span class="lbl">Risks</span></div>
+        <div class="stat accent"><span class="val" id="stat-high">0</span><span class="lbl">High</span></div>
+      </div>
+      <button class="file-chip" id="file-chip" title="Click to save (or open if no file is loaded)" aria-label="Current file; click to save">
+        <i class="fa-solid fa-file-code" aria-hidden="true"></i>
+        <span class="fc-name no-file" id="fc-name">no file open</span>
+        <span class="fc-dirty" aria-hidden="true"></span>
+      </button>
+      <button class="header-btn" id="btn-quick" title="Quick add (Q)" aria-label="Quick add a decision or risk"><i class="fa-solid fa-bolt" aria-hidden="true"></i></button>
+      <button class="header-btn" id="btn-print" title="Print current view (Ctrl+P)" aria-label="Print current view"><i class="fa-solid fa-print" aria-hidden="true"></i></button>
+      <button class="header-btn" id="btn-help" title="Help" aria-label="Help"><i class="fa-solid fa-circle-question" aria-hidden="true"></i></button>
+    </div>
+  </header>
+
+  <aside class="sidebar" aria-label="Navigation and filters">
+    <div class="side-section">
+      <label for="search" class="sr-only">Search decisions and risks</label>
+      <div class="search-box"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+        <input type="text" id="search" placeholder="Search decisions &amp; risks..." />
+      </div>
+    </div>
+    <nav class="side-section" aria-label="Views">
+      <h3 id="views-h">Views</h3>
+      <div class="nav-item active" data-view="decisions" role="button" tabindex="0" aria-current="true"><i class="fa-solid fa-list-check" aria-hidden="true"></i> Decisions <span class="count" id="c-dec">0</span></div>
+      <div class="nav-item" data-view="risks" role="button" tabindex="0"><i class="fa-solid fa-flag" aria-hidden="true"></i> Open risks <span class="count" id="c-risk">0</span></div>
+      <div class="nav-item" data-view="matrix" role="button" tabindex="0"><i class="fa-solid fa-table-cells" aria-hidden="true"></i> Risk heat-map</div>
+      <div class="nav-item" data-view="trend" role="button" tabindex="0"><i class="fa-solid fa-chart-line" aria-hidden="true"></i> Risk trend</div>
+      <div class="nav-item" data-view="timeline" role="button" tabindex="0"><i class="fa-solid fa-timeline" aria-hidden="true"></i> Decision timeline</div>
+      <div class="nav-item" data-view="review" role="button" tabindex="0"><i class="fa-solid fa-bell" aria-hidden="true"></i> Needs review <span class="count" id="c-rev">0</span></div>
+      <div class="nav-item" data-view="superseded" role="button" tabindex="0"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i> Superseded <span class="count" id="c-sup">0</span></div>
+    </nav>
+    <div class="side-section">
+      <h3 id="sv-h">Saved views</h3>
+      <div id="saved-views"></div>
+    </div>
+    <div class="side-section">
+      <h3 id="sf-h">Filter &middot; Status</h3>
+      <div class="chip-row" id="status-filters" role="group" aria-labelledby="sf-h"></div>
+    </div>
+    <div class="side-section">
+      <h3 id="tf-h">Filter &middot; Tag</h3>
+      <div class="chip-row" id="tag-filters" role="group" aria-labelledby="tf-h"></div>
+    </div>
+    <div class="side-section">
+      <h3>Data</h3>
+      <button class="btn sm" id="btn-open" style="width:100%; margin-bottom:6px"><i class="fa-solid fa-folder-open" aria-hidden="true"></i> Open file</button>
+      <button class="btn sm" id="btn-save" style="width:100%; margin-bottom:6px"><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> Save</button>
+      <button class="btn sm" id="btn-export-md" style="width:100%; margin-bottom:6px"><i class="fa-brands fa-markdown" aria-hidden="true"></i> Export Markdown</button>
+      <button class="btn sm" id="btn-export-csv" style="width:100%; margin-bottom:6px"><i class="fa-solid fa-file-csv" aria-hidden="true"></i> Export CSV</button>
+      <button class="btn sm" id="btn-ato" style="width:100%; margin-bottom:6px"><i class="fa-solid fa-file-shield" aria-hidden="true"></i> Audit / ATO package</button>
+      <button class="btn sm" id="btn-snapshot" style="width:100%; margin-bottom:6px"><i class="fa-solid fa-camera" aria-hidden="true"></i> Snapshot risk register</button>
+      <button class="btn sm" id="btn-sample" style="width:100%"><i class="fa-solid fa-flask" aria-hidden="true"></i> Load sample</button>
+    </div>
+  </aside>
+
+  <main id="main" role="main" aria-label="Records" tabindex="-1"></main>
+
+  <footer role="contentinfo">
+    <span><span class="status-dot"></span>Offline-ready &middot; localStorage</span>
+    <span id="foot-view">Decisions</span>
+    <span class="foot-credit">Created by <strong>Ross Bethune</strong>
+      <span aria-hidden="true">&middot;</span>
+      <a href="https://github.com/RJBethune/decision-risk-log" target="_blank" rel="noopener" title="View source on GitHub"><i class="fa-brands fa-github" aria-hidden="true"></i> View on GitHub</a>
+    </span>
+    <span class="right">data stays local</span>
+  </footer>
+</div>
+
+<input type="file" id="file-input" accept=".json" style="display:none" />
+<div class="modal-backdrop" id="modal-backdrop">
+  <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-head"><h3 id="modal-title">Edit</h3><button class="modal-close" id="modal-close" aria-label="Close dialog"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button></div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-foot" id="modal-foot">
+      <button class="btn ghost" id="modal-cancel">Cancel</button>
+      <button class="btn primary" id="modal-save"><i class="fa-solid fa-check"></i> Save</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+"use strict";
+/* ============================================================================
+   Decision & Risk Log — single-file tool. Mirrors the Enterprise Relationship
+   Graph's architecture: file-as-source-of-truth, localStorage cache, status
+   badges, tag filters, search, record links, exports. No backend, no install.
+   ============================================================================ */
+
+const STORAGE_KEY = "decision-risk-log.v1";
+const EDITOR_NAME_KEY = "drl.editorName";
+const FSA_SUPPORTED = "showSaveFilePicker" in window;
+
+const DECISION_STATUSES = ["Proposed","Accepted","Superseded","Rejected"];
+const RISK_STATUSES = ["Open","Mitigating","Accepted","Closed"];
+
+const state = {
+  data: { version:1, decisions:[], risks:[] },
+  view: "decisions",
+  search: "",
+  statusFilter: new Set(),     // empty = all
+  tagFilter: new Set(),        // empty = all
+  matrixCell: null,            // {l,i} when a heat-map cell is clicked
+  fileHandle: null,
+  fileName: null,
+  dirty: false
+};
+const STALE_DECISION_DAYS = 180;   // unreviewed decision considered stale after
+const STALE_RISK_DAYS = 90;        // open risk not updated considered stale after
+const DECISION_TEMPLATES = {
+  "Blank": {},
+  "Technology selection": { context:"We need to choose a technology for ___. Constraints: ___.", options:"Option A\nOption B *\nOption C", consequences:"Accept: ___. Gain: ___.", tags:["infra"] },
+  "Vendor selection": { context:"We need a vendor for ___. Evaluation criteria: cost, support, compliance, lock-in.", options:"Vendor A\nVendor B *", consequences:"Accept: ___. Gain: ___.", tags:["vendor"] },
+  "Security exception": { context:"A control cannot be met as written because ___.", options:"Block until resolved\nAccept with compensating controls *", consequences:"Residual risk tracked as RISK-___. Compensating controls: ___.", tags:["security","ATO"] },
+  "Architecture pattern": { context:"We need a consistent approach to ___ across the system.", options:"Pattern A\nPattern B *", consequences:"Accept: ___. Gain: consistency, ___.", tags:["data"] }
+};
+
+const uid = p => p + "-" + Math.random().toString(36).slice(2,7);
+const $ = id => document.getElementById(id);
+const esc = s => String(s==null?"":s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));
+
+function nextId(prefix, arr){
+  let max = 0;
+  arr.forEach(r => { const m = /(\d+)$/.exec(r.id||""); if (m) max = Math.max(max, +m[1]); });
+  return prefix + "-" + String(max+1).padStart(3,"0");
+}
+function riskScore(r){ return (Number(r.likelihood)||0) * (Number(r.impact)||0); }
+function scoreColor(s){
+  if (s >= 15) return "#F87171";
+  if (s >= 9)  return "#FB923C";
+  if (s >= 4)  return "#FBBF24";
+  return "#34D399";
+}
+function relTime(iso){
+  if (!iso) return "";
+  const d = (Date.now() - new Date(iso).getTime())/86400000;
+  if (isNaN(d)) return "";
+  if (d < 1) return "today";
+  if (d < 2) return "1d ago";
+  if (d < 30) return Math.floor(d)+"d ago";
+  if (d < 60) return "1mo ago";
+  if (d < 365) return Math.floor(d/30)+"mo ago";
+  return Math.floor(d/365)+"y ago";
+}
+function getEditor(){
+  let n = localStorage.getItem(EDITOR_NAME_KEY);
+  if (!n){ n = (prompt("Your name (for the 'decided by' field):","")||"").trim(); if (n) localStorage.setItem(EDITOR_NAME_KEY, n); }
+  return n || "unknown";
+}
+
+/* ---------- persistence ---------- */
+function persist(){ try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data)); } catch(_){} }
+function markDirty(){ state.dirty = true; updateFileChip(); }
+function markClean(){ state.dirty = false; updateFileChip(); }
+function afterMutate(){ persist(); markDirty(); render(); }
+
+function loadInitial(){
+  let loaded = null;
+  try { const s = localStorage.getItem(STORAGE_KEY); if (s) loaded = JSON.parse(s); } catch(_){}
+  if (loaded && Array.isArray(loaded.decisions) && Array.isArray(loaded.risks)) state.data = loaded;
+  else state.data = SAMPLE_DATA();
+  normalize();
+}
+function normalize(){
+  if (!Array.isArray(state.data.decisions)) state.data.decisions = [];
+  if (!Array.isArray(state.data.risks)) state.data.risks = [];
+  const arr = v => Array.isArray(v) ? v : (v == null || v === "" ? [] : [v]);
+  state.data.decisions.forEach(d => {
+    d.tags = arr(d.tags); d.options = arr(d.options); d.relatedRisks = arr(d.relatedRisks);
+    if (d.title == null) d.title = "(untitled)";
+    if (!DECISION_STATUSES.includes(d.status)) d.status = "Proposed";
+  });
+  state.data.risks.forEach(r => {
+    r.tags = arr(r.tags); r.relatedDecisions = arr(r.relatedDecisions);
+    r.likelihood = Math.max(0, Math.min(5, Number(r.likelihood)||0));
+    r.impact = Math.max(0, Math.min(5, Number(r.impact)||0));
+    if (r.title == null) r.title = "(untitled)";
+    if (!RISK_STATUSES.includes(r.status)) r.status = "Open";
+  });
+  if (Array.isArray(state.data.snapshots)){
+    state.data.snapshots = state.data.snapshots.filter(x => x && typeof x.ts === "string")
+      .map(x => ({ ts:x.ts, total:Number(x.total)||0, open:Number(x.open)||0, high:Number(x.high)||0, sumScore:Number(x.sumScore)||0 }));
+  }
+  if (Array.isArray(state.data.savedViews)){
+    state.data.savedViews = state.data.savedViews.filter(v => v && v.id && v.name);
+  }
+}
+
+/* ---------- file open / save ---------- */
+async function openFile(){
+  if (FSA_SUPPORTED){
+    try {
+      const [h] = await window.showOpenFilePicker({ types:[{description:"JSON", accept:{"application/json":[".json"]}}] });
+      const f = await h.getFile();
+      applyLoaded(JSON.parse(await f.text()), f.name);
+      state.fileHandle = h;
+    } catch(e){ if (e.name !== "AbortError") toast("Open failed: "+e.message,"err"); }
+  } else {
+    $("file-input").click();
+  }
+}
+function applyLoaded(obj, name){
+  if (!obj || !Array.isArray(obj.decisions) || !Array.isArray(obj.risks)){ toast("Not a recognized log file","err"); return; }
+  state.data = obj; normalize();
+  if(!Array.isArray(state.data.snapshots)) state.data.snapshots = [];
+  if(!Array.isArray(state.data.savedViews)) state.data.savedViews = [];
+  state.fileName = name || null; markClean(); persist(); render();
+  toast("Opened "+(name||"file"),"ok");
+}
+async function saveFile(){
+  snapshotRegister(true); // silently record a daily datapoint so the trend builds over time
+  const text = JSON.stringify(currentBundle(), null, 2);
+  if (FSA_SUPPORTED){
+    try {
+      if (!state.fileHandle){
+        state.fileHandle = await window.showSaveFilePicker({ suggestedName: state.fileName || "decision-risk-log.json",
+          types:[{description:"JSON", accept:{"application/json":[".json"]}}] });
+        state.fileName = state.fileHandle.name;
+      }
+      const w = await state.fileHandle.createWritable(); await w.write(text); await w.close();
+      markClean(); toast("Saved to "+state.fileName,"ok");
+    } catch(e){ if (e.name !== "AbortError") toast("Save failed: "+e.message,"err"); }
+  } else {
+    downloadBlob(text, state.fileName || "decision-risk-log.json", "application/json");
+    toast("Downloaded a copy","ok");
+  }
+}
+function currentBundle(){
+  return { version:1, exportedAt:new Date().toISOString(), decisions:state.data.decisions, risks:state.data.risks,
+           snapshots:getSnapshots(), savedViews:getSavedViews() };
+}
+function downloadBlob(content, filename, type){
+  const blob = new Blob([content], {type}); const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href = url; a.download = filename; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+}
+function updateFileChip(){
+  const chip = $("file-chip"), name = $("fc-name");
+  chip.classList.toggle("dirty", state.dirty);
+  if (state.fileName){ name.textContent = state.fileName; name.classList.remove("no-file"); }
+  else { name.textContent = state.dirty ? "unsaved · no file" : "no file open"; name.classList.add("no-file"); }
+}
+
+/* ---------- lookups ---------- */
+const findDecision = id => state.data.decisions.find(d => d.id === id);
+const findRisk = id => state.data.risks.find(r => r.id === id);
+function allTags(){
+  const t = new Set();
+  state.data.decisions.forEach(d => (d.tags||[]).forEach(x => t.add(x)));
+  state.data.risks.forEach(r => (r.tags||[]).forEach(x => t.add(x)));
+  return [...t].sort();
+}
+function matchesSearch(rec){
+  if (!state.search) return true;
+  const s = state.search.toLowerCase();
+  const hay = [rec.id, rec.title, rec.context, rec.decision, rec.description, rec.mitigation, rec.owner, rec.decidedBy, (rec.tags||[]).join(" ")]
+    .map(x => (x||"").toLowerCase()).join(" ");
+  return hay.includes(s);
+}
+function matchesTag(rec){
+  if (state.tagFilter.size === 0) return true;
+  return (rec.tags||[]).some(t => state.tagFilter.has(t));
+}
+
+/* ============================================================================
+   RENDER
+   ============================================================================ */
+function render(){
+  buildSidebar();
+  updateStats();
+  const m = $("main");
+  if (state.view === "decisions" || state.view === "superseded") renderDecisionList(m);
+  else if (state.view === "risks") renderRiskList(m);
+  else if (state.view === "matrix") renderMatrix(m);
+  else if (state.view === "trend") renderTrend(m);
+  else if (state.view === "timeline") renderTimeline(m);
+  else if (state.view === "review") renderReview(m);
+  renderSavedViews();
+  $("foot-view").textContent = ({decisions:"Decisions",risks:"Open risks",matrix:"Risk heat-map",superseded:"Superseded",trend:"Risk trend",timeline:"Decision timeline",review:"Needs review"})[state.view] || "";
+}
+
+function updateStats(){
+  $("stat-dec").textContent = state.data.decisions.length;
+  $("stat-risk").textContent = state.data.risks.length;
+  const high = state.data.risks.filter(r => r.status !== "Closed" && riskScore(r) >= 15).length;
+  $("stat-high").textContent = high;
+  $("c-dec").textContent = state.data.decisions.filter(d => d.status !== "Superseded").length;
+  $("c-risk").textContent = state.data.risks.filter(r => r.status !== "Closed").length;
+  $("c-sup").textContent = state.data.decisions.filter(d => d.status === "Superseded").length;
+  const revc = $("c-rev"); if (revc) revc.textContent = reviewItems().length;
+}
+
+function buildSidebar(){
+  document.querySelectorAll(".nav-item").forEach(n => {
+    const on = n.dataset.view === state.view;
+    n.classList.toggle("active", on);
+    if (on) n.setAttribute("aria-current","true"); else n.removeAttribute("aria-current");
+  });
+  // status filters depend on view family
+  const sf = $("status-filters"); sf.innerHTML = "";
+  const statuses = (state.view === "risks") ? RISK_STATUSES : DECISION_STATUSES;
+  statuses.forEach(st => {
+    const cls = "s-" + st.toLowerCase();
+    const on = state.statusFilter.size === 0 || state.statusFilter.has(st);
+    const el = document.createElement("span");
+    el.className = "chip " + cls + (on ? "" : " off");
+    el.textContent = st;
+    el.setAttribute("role","checkbox"); el.setAttribute("tabindex","0"); el.setAttribute("aria-checked", on?"true":"false");
+    el.setAttribute("aria-label","Filter status "+st);
+    const toggleSt = () => { if (state.statusFilter.has(st)) state.statusFilter.delete(st); else state.statusFilter.add(st);
+      if (state.statusFilter.size === statuses.length) state.statusFilter.clear(); render(); };
+    el.onclick = toggleSt;
+    el.onkeydown = e => { if (e.key==="Enter"||e.key===" "){ e.preventDefault(); toggleSt(); } };
+    sf.appendChild(el);
+  });
+  const tf = $("tag-filters"); tf.innerHTML = "";
+  const tags = allTags();
+  if (!tags.length){ tf.innerHTML = '<span style="font-size:11px;color:var(--muted)">No tags yet</span>'; }
+  tags.forEach(t => {
+    const el = document.createElement("span");
+    el.className = "chip tag" + (state.tagFilter.has(t) ? " on" : "");
+    el.textContent = t;
+    el.setAttribute("role","checkbox"); el.setAttribute("tabindex","0"); el.setAttribute("aria-checked", state.tagFilter.has(t)?"true":"false");
+    el.setAttribute("aria-label","Filter tag "+t);
+    const toggleTag = () => { if (state.tagFilter.has(t)) state.tagFilter.delete(t); else state.tagFilter.add(t); render(); };
+    el.onclick = toggleTag;
+    el.onkeydown = e => { if (e.key==="Enter"||e.key===" "){ e.preventDefault(); toggleTag(); } };
+    tf.appendChild(el);
+  });
+}
+
+function statusFilterOk(rec, statuses){
+  if (state.statusFilter.size === 0) return true;
+  return state.statusFilter.has(rec.status);
+}
+
+/* ----- decision list ----- */
+function renderDecisionList(m){
+  const supView = state.view === "superseded";
+  let rows = state.data.decisions.filter(d => {
+    if (supView && d.status !== "Superseded") return false;
+    // In the main log, hide superseded decisions unless the user explicitly
+    // filters for them (they have their own "Superseded" view).
+    if (!supView && d.status === "Superseded" && !state.statusFilter.has("Superseded")) return false;
+    return statusFilterOk(d, DECISION_STATUSES) && matchesSearch(d) && matchesTag(d);
+  });
+  rows.sort((a,b) => (b.updatedAt||"").localeCompare(a.updatedAt||""));
+  const head = `
+    <div class="view-head">
+      <h1>${supView ? "Superseded decisions" : "Decision log"}</h1>
+      <span class="sub">${rows.length} record${rows.length===1?"":"s"}</span>
+      <div class="actions">
+        <button class="btn primary" id="add-decision"><i class="fa-solid fa-plus"></i> New decision</button>
+      </div>
+    </div>`;
+  if (!rows.length){ m.innerHTML = head + emptyState("fa-list-check","No decisions yet","Record your first architecture decision — the why survives staff turnover and audits."); wireListHead(); return; }
+  let html = head + '<table class="list"><thead><tr><th>ID</th><th>Decision</th><th>Status</th><th>Owner</th><th>Updated</th></tr></thead><tbody>';
+  rows.forEach(d => {
+    const struck = d.status === "Superseded" ? " struck" : "";
+    const meta = [];
+    if (d.supersedes) meta.push("supersedes " + esc(d.supersedes));
+    if (d.supersededBy) meta.push("superseded by " + esc(d.supersededBy));
+    if ((d.relatedRisks||[]).length) meta.push((d.relatedRisks.length) + " linked risk" + (d.relatedRisks.length===1?"":"s"));
+    html += `<tr class="row" data-id="${esc(d.id)}" tabindex="0" role="button" aria-label="${esc(d.id)}: ${esc(d.title)}">
+      <td><span class="rec-id">${esc(d.id)}</span></td>
+      <td><div class="rec-title${struck}">${esc(d.title)}</div>
+          ${meta.length?`<div class="rec-meta">${meta.join(" · ")}</div>`:""}
+          ${(d.tags||[]).length?`<div class="tagline">${d.tags.map(t=>`<span class="t">${esc(t)}</span>`).join("")}</div>`:""}</td>
+      <td class="col-status">${decisionBadge(d.status)}${decisionStale(d)?' <span class="badge b-stale" title="Past review / stale"><i class="fa-solid fa-bell"></i>Review</span>':""}</td>
+      <td class="col-owner">${esc(d.decidedBy||"—")}</td>
+      <td class="col-upd">${relTime(d.updatedAt)||"—"}</td>
+    </tr>`;
+  });
+  html += "</tbody></table>";
+  m.innerHTML = html;
+  wireListHead();
+  m.querySelectorAll("tr.row").forEach(tr => { tr.onclick = () => openDecisionDetail(tr.dataset.id);
+    tr.onkeydown = e => { if (e.key==="Enter"||e.key===" "){ e.preventDefault(); openDecisionDetail(tr.dataset.id); } }; });
+}
+function wireListHead(){
+  const a = $("add-decision"); if (a) a.onclick = () => openDecisionModal(null);
+  const r = $("add-risk"); if (r) r.onclick = () => openRiskModal(null);
+}
+function decisionBadge(st){
+  const map = {Accepted:"b-accepted",Proposed:"b-proposed",Superseded:"b-superseded",Rejected:"b-rejected"};
+  const icon = {Accepted:"fa-circle-check",Proposed:"fa-clock",Superseded:"fa-circle-xmark",Rejected:"fa-ban"};
+  return `<span class="badge ${map[st]||"b-rejected"}"><i class="fa-solid ${icon[st]||"fa-circle"}"></i>${esc(st)}</span>`;
+}
+function riskBadge(st){
+  const map = {Open:"b-open",Mitigating:"b-mitigating",Accepted:"b-accepted-risk",Closed:"b-closed"};
+  const icon = {Open:"fa-circle-exclamation",Mitigating:"fa-screwdriver-wrench",Accepted:"fa-circle-check",Closed:"fa-circle-check"};
+  return `<span class="badge ${map[st]||"b-open"}"><i class="fa-solid ${icon[st]||"fa-circle"}"></i>${esc(st)}</span>`;
+}
+function emptyState(icon,h,p){
+  return `<div class="empty"><div class="glyph"><i class="fa-solid ${icon}"></i></div><h3 style="margin:0;color:var(--text)">${h}</h3><p style="margin:0;max-width:340px">${p}</p></div>`;
+}
+
+/* ----- risk list ----- */
+function renderRiskList(m){
+  let rows = state.data.risks.filter(r => statusFilterOk(r, RISK_STATUSES) && matchesSearch(r) && matchesTag(r));
+  rows.sort((a,b) => riskScore(b) - riskScore(a));
+  const head = `
+    <div class="view-head">
+      <h1>Risks</h1><span class="sub">${rows.length} shown · sorted by score</span>
+      <div class="actions"><button class="btn primary" id="add-risk"><i class="fa-solid fa-plus"></i> New risk</button></div>
+    </div>`;
+  if (!rows.length){ m.innerHTML = head + emptyState("fa-flag","No risks logged","Track a risk with likelihood, impact, mitigation and an owner. Score = likelihood × impact."); wireListHead(); return; }
+  let html = head + '<div class="risk-list" style="max-width:820px">';
+  rows.forEach(r => {
+    const s = riskScore(r);
+    html += `<div class="risk-row" data-id="${esc(r.id)}">
+      <span class="risk-dot" style="background:${scoreColor(s)}"></span>
+      <span class="rid">${esc(r.id)}</span>
+      <span class="rtitle">${esc(r.title)} ${riskBadge(r.status)}</span>
+      <span class="rscore">${r.likelihood||0}×${r.impact||0}=${s}</span>
+      <span class="rowner ${r.owner?"":"noowner"}">${r.owner?esc(r.owner):"no owner ⚠"}</span>
+    </div>`;
+  });
+  html += "</div>";
+  m.innerHTML = html; wireListHead();
+  m.querySelectorAll(".risk-row").forEach(row => row.onclick = () => openRiskModal(findRisk(row.dataset.id)));
+}
+
+/* ----- risk matrix ----- */
+function renderMatrix(m){
+  const head = `<div class="view-head"><h1>Risk heat-map</h1><span class="sub">likelihood × impact — click a cell to filter</span>
+    <div class="actions"><button class="btn primary" id="add-risk"><i class="fa-solid fa-plus"></i> New risk</button></div></div>`;
+  // bucket risks (exclude Closed) by L,I
+  const open = state.data.risks.filter(r => r.status !== "Closed" && matchesSearch(r) && matchesTag(r));
+  const bucket = {};
+  open.forEach(r => { const k = (r.likelihood||0)+","+(r.impact||0); (bucket[k]||(bucket[k]=[])).push(r); });
+
+  let grid = '<div class="matrix">';
+  // header row
+  grid += '<div></div>';
+  for (let i=1;i<=5;i++) grid += `<div class="colhead">${i}</div>`;
+  // rows: likelihood 5 (top) down to 1
+  for (let l=5;l>=1;l--){
+    grid += `<div class="axis-l">L${l}</div>`;
+    for (let i=1;i<=5;i++){
+      const s = l*i; const k = l+","+i; const here = bucket[k]||[];
+      let inner = "";
+      if (here.length === 1) inner = `<span class="dot" style="background:${scoreColor(s)}">${(here[0].id.match(/(\d+)$/)||["",here[0].id])[1].replace(/^0+(?=\d)/,"")}</span>`;
+      else if (here.length > 1) inner = `<span class="dot" style="background:${scoreColor(s)}">${here.length}</span>`;
+      grid += `<div class="cell" data-l="${l}" data-i="${i}" role="button" tabindex="0" aria-label="Likelihood ${l}, impact ${i}, score ${s}${here.length?", "+here.length+" risk(s)":""}" style="background:${cellTint(s)}" title="L${l} × I${i} = ${s}${here.length?" · "+here.length+" risk(s)":""}">${inner}</div>`;
+    }
+  }
+  grid += "</div>";
+
+  const axis = `<div style="display:flex; flex-direction:column; align-items:center; gap:8px">
+    <div class="matrix-axislabel">Impact →</div>${grid}
+    <div class="matrix-axislabel">↑ Likelihood</div></div>`;
+
+  // side list reflecting current cell filter
+  let listRisks = open.slice().sort((a,b)=>riskScore(b)-riskScore(a));
+  let listTitle = "All open risks";
+  if (state.matrixCell){ const {l,i} = state.matrixCell;
+    listRisks = (bucket[l+","+i]||[]); listTitle = `L${l} × I${i} · ${listRisks.length} risk(s)`; }
+  let side = `<div class="risk-list"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <h3 style="margin:0;font-size:13px;color:var(--text-2)">${listTitle}</h3>
+      ${state.matrixCell?'<button class="btn sm ghost" id="clear-cell">clear</button>':""}</div>`;
+  if (!listRisks.length) side += '<p style="color:var(--muted);font-size:12.5px">No open risks here.</p>';
+  listRisks.forEach(r => { const s = riskScore(r);
+    side += `<div class="risk-row" data-id="${esc(r.id)}">
+      <span class="risk-dot" style="background:${scoreColor(s)}"></span>
+      <span class="rid">${esc(r.id)}</span>
+      <span class="rtitle">${esc(r.title)}</span>
+      <span class="rscore">${s}</span>
+      <span class="rowner ${r.owner?"":"noowner"}">${r.owner?esc(r.owner):"no owner ⚠"}</span></div>`;
+  });
+  side += "</div>";
+
+  m.innerHTML = head + `<div class="matrix-wrap">${axis}${side}</div>`;
+  wireListHead();
+  const cellToggle = c => { const l=+c.dataset.l, i=+c.dataset.i;
+    state.matrixCell = (state.matrixCell && state.matrixCell.l===l && state.matrixCell.i===i) ? null : {l,i}; render(); };
+  m.querySelectorAll(".cell").forEach(c => { c.onclick = () => cellToggle(c);
+    c.onkeydown = e => { if (e.key==="Enter"||e.key===" "){ e.preventDefault(); cellToggle(c); } }; });
+  const cc = $("clear-cell"); if (cc) cc.onclick = () => { state.matrixCell = null; render(); };
+  m.querySelectorAll(".risk-row").forEach(row => row.onclick = () => openRiskModal(findRisk(row.dataset.id)));
+}
+function cellTint(s){
+  if (s >= 15) return "rgba(248,113,113,0.22)";
+  if (s >= 9)  return "rgba(251,146,60,0.20)";
+  if (s >= 4)  return "rgba(251,191,36,0.16)";
+  return "rgba(52,211,153,0.13)";
+}
+
+/* ============================================================================
+   DECISION DETAIL + EDIT
+   ============================================================================ */
+function openDecisionDetail(id){
+  const d = findDecision(id); if (!d) return;
+  const m = $("main");
+  const opts = (d.options||[]).map(o => {
+    const txt = typeof o === "string" ? o : o.text;
+    const chosen = typeof o === "object" && o.chosen;
+    const rejected = typeof o === "object" && o.rejected;
+    return `<li>${esc(txt)}${chosen?'<span class="pick">✓ chosen</span>':""}${rejected?'<span class="rej">✗ rejected</span>':""}</li>`;
+  }).join("");
+  const links = [];
+  if (d.supersedes && findDecision(d.supersedes)) links.push(linkChip(d.supersedes,"fa-clock-rotate-left","decision"));
+  if (d.supersededBy && findDecision(d.supersededBy)) links.push(linkChip(d.supersededBy,"fa-arrow-up","decision"));
+  (d.relatedRisks||[]).forEach(rid => { if (findRisk(rid)) links.push(linkChip(rid,"fa-flag","risk")); });
+
+  m.innerHTML = `
+    <button class="btn sm ghost" id="back" style="margin-bottom:14px"><i class="fa-solid fa-arrow-left"></i> Back to log</button>
+    <div class="detail">
+      <span class="d-id">${esc(d.id)}</span> ${decisionBadge(d.status)}${decisionStale(d)?' <span class="badge b-stale"><i class="fa-solid fa-bell"></i>Due for review</span>':""}
+      <h1>${esc(d.title)}</h1>
+      ${(d.tags||[]).length?`<div class="tagline">${d.tags.map(t=>`<span class="t">${esc(t)}</span>`).join("")}</div>`:""}
+      ${section("Context — what forced this", d.context)}
+      ${opts?`<div class="d-section"><h4>Options considered</h4><ul class="d-options">${opts}</ul></div>`:""}
+      ${section("Decision", d.decision)}
+      ${section("Consequences / tradeoffs", d.consequences)}
+      ${links.length?`<div class="d-section"><h4>Links</h4>${links.join("")}</div>`:""}
+      <div class="d-section"><h4>Decided by / when</h4><p>${esc(d.decidedBy||"—")}${d.decidedAt?" · "+esc(d.decidedAt):""}${d.reviewBy?" · review by "+esc(d.reviewBy):""}</p></div>
+      <div class="d-foot">
+        <button class="btn primary" id="d-edit"><i class="fa-solid fa-pen"></i> Edit</button>
+        ${d.status!=="Superseded"?'<button class="btn" id="d-supersede"><i class="fa-solid fa-clock-rotate-left"></i> Supersede with new…</button>':""}
+        <button class="btn" id="d-export"><i class="fa-brands fa-markdown"></i> Export MD</button>
+        <button class="btn danger" id="d-delete" style="margin-left:auto"><i class="fa-solid fa-trash"></i> Delete</button>
+      </div>
+    </div>`;
+  $("back").onclick = () => render();
+  $("d-edit").onclick = () => openDecisionModal(d);
+  $("d-export").onclick = () => { downloadBlob(decisionToMd(d), d.id+".md", "text/markdown"); toast("Exported "+d.id+".md","ok"); };
+  $("d-delete").onclick = () => { if (confirm("Delete "+d.id+"?")){ deleteDecision(d.id); } };
+  const sup = $("d-supersede"); if (sup) sup.onclick = () => openDecisionModal(null, d.id);
+  m.querySelectorAll(".linkrec").forEach(el => el.onclick = () => {
+    const t = el.dataset.kind, rid = el.dataset.id;
+    if (t === "decision") openDecisionDetail(rid); else { state.view="risks"; render(); openRiskModal(findRisk(rid)); }
+  });
+}
+function section(title, body){
+  if (!body) return "";
+  return `<div class="d-section"><h4>${title}</h4><p>${esc(body)}</p></div>`;
+}
+function linkChip(id, icon, kind){
+  return `<span class="linkrec" data-id="${esc(id)}" data-kind="${kind}"><i class="fa-solid ${icon}"></i>${esc(id)}</span>`;
+}
+
+function openDecisionModal(existing, supersedesId){
+  const d = existing || {};
+  const isEdit = !!existing;
+  const statusOpts = DECISION_STATUSES.map(s => `<option ${d.status===s?"selected":""}>${s}</option>`).join("");
+  const decOpts = state.data.decisions.filter(x => x.id !== d.id)
+    .map(x => `<option value="${esc(x.id)}" ${d.supersedes===x.id?"selected":""}>${esc(x.id)} — ${esc(x.title)}</option>`).join("");
+  const optionsText = (d.options||[]).map(o => typeof o==="string"?o:(o.text + (o.chosen?" *":""))).join("\n");
+  const tmplRow = isEdit ? "" : `<div class="field"><label>Start from a template</label><select id="f-template">${Object.keys(DECISION_TEMPLATES).map(k=>`<option>${esc(k)}</option>`).join("")}</select></div>`;
+  const body = tmplRow + `
+    <div class="field"><label>Title</label><input type="text" id="f-title" value="${esc(d.title||"")}" placeholder="e.g. Adopt PostgreSQL over SQL Server"></div>
+    <div class="field-row">
+      <div class="field"><label>Status</label><select id="f-status">${statusOpts}</select></div>
+      <div class="field"><label>Decided by</label><input type="text" id="f-decidedBy" value="${esc(d.decidedBy||"")}" placeholder="${esc(getEditorSafe())}"></div>
+    </div>
+    <div class="field"><label>Context — what forced this decision</label><textarea id="f-context" placeholder="Constraints, costs, pressures...">${esc(d.context||"")}</textarea></div>
+    <div class="field"><label>Options considered <span class="hint">one per line; add * to mark the chosen one</span></label><textarea id="f-options" placeholder="SQL Server\nPostgreSQL *\nManaged cloud DB">${esc(optionsText)}</textarea></div>
+    <div class="field"><label>Decision</label><textarea id="f-decision" placeholder="What was decided">${esc(d.decision||"")}</textarea></div>
+    <div class="field"><label>Consequences / tradeoffs</label><textarea id="f-consequences" placeholder="What we accept; what we gain">${esc(d.consequences||"")}</textarea></div>
+    <div class="field-row">
+      <div class="field"><label>Supersedes (optional)</label><select id="f-supersedes"><option value="">— none —</option>${decOpts}</select></div>
+      <div class="field"><label>Review by (optional)</label><input type="text" id="f-reviewBy" value="${esc(d.reviewBy||"")}" placeholder="e.g. 2027-05 or 12 months"></div>
+    </div>
+    <div class="field"><label>Tags <span class="hint">comma-separated</span></label><input type="text" id="f-tags" value="${esc((d.tags||[]).join(", "))}" placeholder="security, data, ATO"></div>`;
+  openModal(isEdit ? "Edit decision" : "New decision", body, () => {
+    const title = $("f-title").value.trim();
+    if (!title){ toast("Title is required","err"); return; }
+    const optsRaw = $("f-options").value.split("\n").map(s=>s.trim()).filter(Boolean);
+    const options = optsRaw.map(line => line.endsWith(" *") ? {text:line.slice(0,-2).trim(), chosen:true} : {text:line});
+    const rec = existing || { id: nextId("ADR", state.data.decisions), relatedRisks:[], createdAt:new Date().toISOString() };
+    rec.title = title;
+    rec.status = $("f-status").value;
+    rec.decidedBy = $("f-decidedBy").value.trim();
+    rec.context = $("f-context").value.trim();
+    rec.options = options;
+    rec.decision = $("f-decision").value.trim();
+    rec.consequences = $("f-consequences").value.trim();
+    rec.supersedes = $("f-supersedes").value || "";
+    rec.reviewBy = $("f-reviewBy").value.trim();
+    rec.tags = $("f-tags").value.split(",").map(s=>s.trim()).filter(Boolean);
+    rec.decidedAt = rec.decidedAt || new Date().toISOString().slice(0,10);
+    rec.updatedAt = new Date().toISOString();
+    if (!existing) state.data.decisions.push(rec);
+    // maintain reverse supersededBy link
+    reconcileSupersede(rec);
+    if (!existing && supersedesId){ rec.supersedes = supersedesId; reconcileSupersede(rec); }
+    afterMutate(); closeModal();
+    toast(existing ? "Decision updated" : "Decision "+rec.id+" added","ok");
+    if (existing) openDecisionDetail(rec.id);
+  });
+  const tsel = document.getElementById("f-template");
+  if (tsel) tsel.onchange = () => {
+    const t = DECISION_TEMPLATES[tsel.value] || {};
+    const set = (id,v)=>{ const el=document.getElementById(id); if(el && v!=null) el.value=v; };
+    if (t.context!=null) set("f-context", t.context);
+    if (t.options!=null) set("f-options", t.options);
+    if (t.consequences!=null) set("f-consequences", t.consequences);
+    if (t.tags!=null) set("f-tags", t.tags.join(", "));
+  };
+}
+function reconcileSupersede(rec){
+  // Clear stale back-links and restore the prior status of any decision this
+  // record no longer supersedes (so re-pointing a supersede doesn't strand the
+  // old target as permanently "Superseded").
+  state.data.decisions.forEach(d => {
+    if (d.supersededBy === rec.id && rec.supersedes !== d.id){
+      d.supersededBy = "";
+      if (d.status === "Superseded"){ d.status = d._prevStatus || "Accepted"; }
+      delete d._prevStatus;
+    }
+  });
+  if (rec.supersedes){
+    const target = findDecision(rec.supersedes);
+    if (target && target.id !== rec.id){
+      target.supersededBy = rec.id;
+      if (target.status !== "Superseded"){ target._prevStatus = target.status; target.status = "Superseded"; }
+    }
+  }
+}
+function deleteDecision(id){
+  state.data.decisions = state.data.decisions.filter(d => d.id !== id);
+  state.data.decisions.forEach(d => {
+    if (d.supersededBy === id){ d.supersededBy = ""; if (d.status === "Superseded"){ d.status = d._prevStatus || "Accepted"; delete d._prevStatus; } }
+    if (d.supersedes === id) d.supersedes = "";
+  });
+  // drop dangling links from risks that referenced this decision
+  state.data.risks.forEach(r => { if (Array.isArray(r.relatedDecisions)) r.relatedDecisions = r.relatedDecisions.filter(x => x !== id); });
+  afterMutate(); toast("Deleted "+id,"ok");
+}
+
+/* ============================================================================
+   RISK EDIT
+   ============================================================================ */
+function openRiskModal(existing){
+  const r = existing || {};
+  const isEdit = !!existing;
+  const statusOpts = RISK_STATUSES.map(s => `<option ${r.status===s?"selected":""}>${s}</option>`).join("");
+  const scale = (id, val) => { let o=""; for (let n=1;n<=5;n++) o+=`<option value="${n}" ${(+val||0)===n?"selected":""}>${n}</option>`; return `<select id="${id}">${o}</select>`; };
+  const decOpts = state.data.decisions
+    .map(x => `<option value="${esc(x.id)}" ${(r.relatedDecisions||[]).includes(x.id)?"selected":""}>${esc(x.id)} — ${esc(x.title)}</option>`).join("");
+  const body = `
+    <div class="field"><label>Title</label><input type="text" id="r-title" value="${esc(r.title||"")}" placeholder="e.g. Unpatched XML parser CVE"></div>
+    <div class="field"><label>Description</label><textarea id="r-desc" placeholder="What is the risk, and why does it matter">${esc(r.description||"")}</textarea></div>
+    <div class="field-row">
+      <div class="field"><label>Likelihood (1–5)</label>${scale("r-like", r.likelihood)}</div>
+      <div class="field"><label>Impact (1–5)</label>${scale("r-impact", r.impact)}</div>
+      <div class="field"><label>Status</label><select id="r-status">${statusOpts}</select></div>
+    </div>
+    <div class="field"><label>Mitigation</label><textarea id="r-mit" placeholder="Plan to reduce likelihood or impact">${esc(r.mitigation||"")}</textarea></div>
+    <div class="field-row">
+      <div class="field"><label>Owner</label><input type="text" id="r-owner" value="${esc(r.owner||"")}" placeholder="Accountable person"></div>
+      <div class="field"><label>Tags <span class="hint">comma-separated</span></label><input type="text" id="r-tags" value="${esc((r.tags||[]).join(", "))}" placeholder="security, vendor"></div>
+    </div>`;
+  const foot = isEdit ? [{label:'<i class="fa-solid fa-trash"></i> Delete', cls:"btn danger", act:()=>{ if(confirm("Delete "+r.id+"?")){ state.data.risks = state.data.risks.filter(x=>x.id!==r.id); state.data.decisions.forEach(d=>{ if (Array.isArray(d.relatedRisks)) d.relatedRisks = d.relatedRisks.filter(x=>x!==r.id); }); afterMutate(); closeModal(); toast("Deleted "+r.id,"ok"); } }}] : [];
+  openModal(isEdit ? "Edit risk" : "New risk", body, () => {
+    const title = $("r-title").value.trim();
+    if (!title){ toast("Title is required","err"); return; }
+    const rec = existing || { id: nextId("RISK", state.data.risks), createdAt:new Date().toISOString() };
+    rec.title = title;
+    rec.description = $("r-desc").value.trim();
+    rec.likelihood = +$("r-like").value;
+    rec.impact = +$("r-impact").value;
+    rec.status = $("r-status").value;
+    rec.mitigation = $("r-mit").value.trim();
+    rec.owner = $("r-owner").value.trim();
+    rec.tags = $("r-tags").value.split(",").map(s=>s.trim()).filter(Boolean);
+    rec.relatedDecisions = rec.relatedDecisions || [];
+    rec.updatedAt = new Date().toISOString();
+    if (!existing) state.data.risks.push(rec);
+    afterMutate(); closeModal();
+    toast(existing ? "Risk updated" : "Risk "+rec.id+" added","ok");
+  }, foot);
+}
+
+/* ============================================================================
+   EXPORTS
+   ============================================================================ */
+function decisionToMd(d){
+  let s = `# ${d.id}: ${d.title}\n\n`;
+  s += `- Status: ${d.status}\n- Decided by: ${d.decidedBy||"—"}${d.decidedAt?" ("+d.decidedAt+")":""}\n`;
+  if (d.supersedes) s += `- Supersedes: ${d.supersedes}\n`;
+  if (d.supersededBy) s += `- Superseded by: ${d.supersededBy}\n`;
+  if ((d.tags||[]).length) s += `- Tags: ${d.tags.join(", ")}\n`;
+  s += "\n";
+  if (d.context) s += `## Context\n${d.context}\n\n`;
+  if ((d.options||[]).length){ s += "## Options considered\n"; d.options.forEach(o=>{ const t=typeof o==="string"?o:o.text; const c=typeof o==="object"&&o.chosen; s+=`- ${t}${c?" **(chosen)**":""}\n`; }); s+="\n"; }
+  if (d.decision) s += `## Decision\n${d.decision}\n\n`;
+  if (d.consequences) s += `## Consequences\n${d.consequences}\n\n`;
+  return s;
+}
+function exportAllMd(){
+  let s = `# Decision & Risk Log\n\nExported ${new Date().toISOString().slice(0,10)}\n\n---\n\n# Decisions\n\n`;
+  state.data.decisions.slice().sort((a,b)=>(a.id).localeCompare(b.id)).forEach(d => { s += decisionToMd(d) + "\n---\n\n"; });
+  s += "# Risk register\n\n| ID | Risk | L | I | Score | Status | Owner | Mitigation |\n|----|------|---|---|-------|--------|-------|------------|\n";
+  state.data.risks.slice().sort((a,b)=>riskScore(b)-riskScore(a)).forEach(r => {
+    s += `| ${r.id} | ${(r.title||"").replace(/\|/g,"\\|")} | ${r.likelihood||0} | ${r.impact||0} | ${riskScore(r)} | ${r.status} | ${r.owner||"—"} | ${(r.mitigation||"").replace(/\|/g,"\\|").replace(/\n/g," ")} |\n`;
+  });
+  downloadBlob(s, "decision-risk-log.md", "text/markdown");
+  toast("Exported Markdown","ok");
+}
+function exportCsv(){
+  const q = v => { let str = String(v==null?"":v); if (/^[=+\-@\t\r]/.test(str)) str = "'" + str; return '"' + str.replace(/"/g,'""') + '"'; };
+  let dec = "id,title,status,decidedBy,decidedAt,supersedes,supersededBy,tags,context,decision,consequences\n";
+  state.data.decisions.forEach(d => { dec += [d.id,d.title,d.status,d.decidedBy,d.decidedAt,d.supersedes,d.supersededBy,(d.tags||[]).join(";"),d.context,d.decision,d.consequences].map(q).join(",")+"\n"; });
+  downloadBlob(dec, "decisions.csv", "text/csv");
+  let rk = "id,title,status,likelihood,impact,score,owner,tags,description,mitigation\n";
+  state.data.risks.forEach(r => { rk += [r.id,r.title,r.status,r.likelihood,r.impact,riskScore(r),r.owner,(r.tags||[]).join(";"),r.description,r.mitigation].map(q).join(",")+"\n"; });
+  setTimeout(()=>downloadBlob(rk, "risks.csv", "text/csv"), 300);
+  toast("Exported CSV (decisions + risks)","ok");
+}
+
+/* ============================================================================
+   MODAL + TOAST
+   ============================================================================ */
+let modalSaveHandler = null;
+function openModal(title, bodyHtml, onSave, extraFootBtns){
+  $("modal-title").textContent = title;
+  $("modal-body").innerHTML = bodyHtml;
+  modalSaveHandler = onSave;
+  // rebuild footer (default cancel + save, plus extras on the left)
+  const foot = $("modal-foot");
+  foot.innerHTML = "";
+  (extraFootBtns||[]).forEach(b => { const el=document.createElement("button"); el.className=b.cls; el.innerHTML=b.label; el.onclick=b.act; el.style.marginRight="auto"; foot.appendChild(el); });
+  const cancel = document.createElement("button"); cancel.className="btn ghost"; cancel.textContent="Cancel"; cancel.onclick=closeModal; foot.appendChild(cancel);
+  const save = document.createElement("button"); save.className="btn primary"; save.innerHTML='<i class="fa-solid fa-check"></i> Save'; save.onclick=()=>{ if(modalSaveHandler) modalSaveHandler(); }; foot.appendChild(save);
+  $("modal-backdrop").classList.add("open");
+  setTimeout(()=>{ const f=$("modal-body").querySelector("input,textarea,select"); if (f) f.focus(); }, 40);
+}
+function closeModal(){ $("modal-backdrop").classList.remove("open"); $("modal-body").innerHTML=""; modalSaveHandler=null; }
+function toast(msg, kind){
+  const el = $("toast"); el.className = "toast " + (kind||"");
+  const icon = kind==="err"?"circle-exclamation":kind==="ok"?"circle-check":"circle-info";
+  el.innerHTML = `<i class="fa-solid fa-${icon}"></i> ${esc(msg)}`;
+  el.classList.add("show"); clearTimeout(toast._t); toast._t = setTimeout(()=>el.classList.remove("show"), 2400);
+}
+function getEditorSafe(){ return localStorage.getItem(EDITOR_NAME_KEY) || "your name"; }
+
+/* ============================================================================
+   SAMPLE DATA
+   ============================================================================ */
+function SAMPLE_DATA(){
+  const today = new Date().toISOString();
+  const ago = days => new Date(Date.now()-days*86400000).toISOString();
+  const decisions = [
+    { id:"ADR-014", title:"Adopt PostgreSQL over SQL Server for core ledger", status:"Accepted",
+      decidedBy:"A. Chen", decidedAt:ago(2).slice(0,10), updatedAt:ago(2),
+      context:"SQL Server licensing cost projected to exceed budget at scale; the team has stronger Postgres operational experience.",
+      options:[{text:"SQL Server"},{text:"PostgreSQL",chosen:true},{text:"Managed cloud DB (rejected — ATO constraints)"}],
+      decision:"PostgreSQL on-prem for the core ledger.",
+      consequences:"Accept: migration effort for 3 legacy stored procedures. Gain: no license cost, team familiarity, open source.",
+      supersedes:"ADR-009", supersededBy:"", reviewBy:"12 months", tags:["data","infra"], relatedRisks:["RISK-002"] },
+    { id:"ADR-013", title:"Use OAuth2 + PKCE for the public API gateway", status:"Accepted",
+      decidedBy:"R. Okafor", decidedAt:ago(5).slice(0,10), updatedAt:ago(5),
+      context:"Public API needs delegated auth that satisfies the ATO and avoids storing client secrets in SPAs.",
+      options:[{text:"API keys"},{text:"OAuth2 + PKCE",chosen:true},{text:"mTLS only"}],
+      decision:"OAuth2 authorization-code flow with PKCE for all public clients.",
+      consequences:"Accept: more setup per client. Gain: no secrets in browsers, standards-based, audit-friendly.",
+      supersedes:"", supersededBy:"", reviewBy:"", tags:["security","api","ATO"], relatedRisks:[] },
+    { id:"ADR-012", title:"Accept transitive CVE in legacy XML parser (mitigated)", status:"Proposed",
+      decidedBy:"A. Chen", decidedAt:ago(8).slice(0,10), updatedAt:ago(8),
+      context:"A transitive dependency carries a known CVE; no patched version is compatible with the legacy ingest path yet.",
+      options:[{text:"Block release until upstream patches"},{text:"Accept with compensating controls",chosen:true},{text:"Rewrite ingest now"}],
+      decision:"Accept the risk with input validation + network isolation as compensating controls; revisit when upstream ships a fix.",
+      consequences:"Accept: residual risk tracked as RISK-004. Gain: keeps release on schedule.",
+      supersedes:"", supersededBy:"", reviewBy:"3 months", tags:["security"], relatedRisks:["RISK-004"] },
+    { id:"ADR-009", title:"Use SQL Server for core ledger", status:"Superseded",
+      decidedBy:"A. Chen", decidedAt:ago(95).slice(0,10), updatedAt:ago(95),
+      context:"Initial choice based on existing DBA familiarity.",
+      options:[{text:"SQL Server",chosen:true},{text:"PostgreSQL"}],
+      decision:"SQL Server Standard for the ledger.",
+      consequences:"Superseded by ADR-014 once licensing costs were modeled at scale.",
+      supersedes:"", supersededBy:"ADR-014", reviewBy:"", tags:["data"], relatedRisks:[] },
+    { id:"ADR-008", title:"Containerize with Podman (not Docker) on GFE", status:"Accepted",
+      decidedBy:"L. Park", decidedAt:ago(60).slice(0,10), updatedAt:ago(60),
+      context:"Government-furnished equipment policy discourages the Docker daemon running as root.",
+      options:[{text:"Docker"},{text:"Podman",chosen:true}],
+      decision:"Podman for local and CI container builds; rootless by default.",
+      consequences:"Accept: minor tooling differences. Gain: rootless, daemonless, policy-compliant.",
+      supersedes:"", supersededBy:"", reviewBy:"", tags:["infra","security"], relatedRisks:[] },
+    { id:"ADR-007", title:"Event sourcing for the audit trail, not CRUD updates", status:"Accepted",
+      decidedBy:"R. Okafor", decidedAt:ago(64).slice(0,10), updatedAt:ago(64),
+      context:"Audit requirements demand an immutable, replayable history of every ledger change.",
+      options:[{text:"CRUD with audit columns"},{text:"Event sourcing",chosen:true}],
+      decision:"Append-only event store as the source of truth; projections for read models.",
+      consequences:"Accept: more upfront complexity. Gain: complete, tamper-evident audit trail.",
+      supersedes:"", supersededBy:"", reviewBy:"", tags:["data","ATO"], relatedRisks:[] }
+  ];
+  const risks = [
+    { id:"RISK-004", title:"Unpatched XML parser CVE", status:"Open", likelihood:5, impact:4,
+      description:"Transitive dependency carries a known remote-code-execution CVE with no compatible patched version yet.",
+      mitigation:"Input validation + network isolation as compensating controls; monitor upstream for a fix.",
+      owner:"", tags:["security"], relatedDecisions:["ADR-012"], updatedAt:ago(8) },
+    { id:"RISK-002", title:"Ledger migration data loss", status:"Mitigating", likelihood:4, impact:4,
+      description:"Migrating the ledger from SQL Server to PostgreSQL risks row-level data loss or corruption.",
+      mitigation:"Dual-write + reconciliation job during cutover; full backup and tested rollback plan.",
+      owner:"L. Park", tags:["data"], relatedDecisions:["ADR-014"], updatedAt:ago(3) },
+    { id:"RISK-006", title:"Vendor API rate-limit at peak", status:"Open", likelihood:3, impact:3,
+      description:"Third-party payment vendor enforces a rate limit that may be exceeded during end-of-month peaks.",
+      mitigation:"Request queue with backoff; negotiate a higher tier before fiscal year-end.",
+      owner:"R. Okafor", tags:["vendor","api"], relatedDecisions:[], updatedAt:ago(12) },
+    { id:"RISK-001", title:"Onboarding delay for new hires", status:"Open", likelihood:2, impact:2,
+      description:"New developers take weeks to understand why the system is built the way it is.",
+      mitigation:"Maintain this decision log; pair new hires with a mentor for the first sprint.",
+      owner:"A. Chen", tags:["process"], relatedDecisions:[], updatedAt:ago(20) },
+    { id:"RISK-005", title:"Single DBA bus factor", status:"Open", likelihood:2, impact:3,
+      description:"Only one team member deeply understands the ledger schema and migration tooling.",
+      mitigation:"Cross-train a second engineer; document the schema in the data dictionary.",
+      owner:"L. Park", tags:["process"], relatedDecisions:[], updatedAt:ago(30) }
+  ];
+  return { version:1, decisions, risks };
+}
+
+/* ============================================================================
+   WIRE UP + BOOT
+   ============================================================================ */
+/* ============================================================================
+   v2 FEATURES: stale-review, quick-add, ATO export, timeline, risk trend,
+   saved views, templates, deep links.
+   ============================================================================ */
+
+function daysSince(iso){ if(!iso) return Infinity; const d=(Date.now()-new Date(iso).getTime())/86400000; return isNaN(d)?Infinity:d; }
+function parseReviewDate(d){
+  // reviewBy may be an ISO-ish date ("2027-05" / "2027-05-01") or a phrase ("12 months").
+  if(!d || !d.reviewBy) return null;
+  const m = /^(\d{4})-(\d{2})(?:-(\d{2}))?$/.exec(d.reviewBy.trim());
+  if(m) return new Date(+m[1], +m[2]-1, +(m[3]||1)).getTime();
+  const rel = /(\d+)\s*(month|year|week|day)/i.exec(d.reviewBy);
+  if(rel && d.decidedAt){ const base=new Date(d.decidedAt).getTime(); const n=+rel[1];
+    const mult={day:1,week:7,month:30,year:365}[rel[2].toLowerCase()]||30;
+    return base + n*mult*86400000; }
+  return null;
+}
+function decisionStale(d){
+  if(d.status==="Superseded"||d.status==="Rejected") return false;
+  const due = parseReviewDate(d);
+  if(due!==null) return Date.now() > due;
+  return daysSince(d.updatedAt) > STALE_DECISION_DAYS;
+}
+function riskStale(r){
+  if(r.status==="Closed") return false;
+  return daysSince(r.updatedAt) > STALE_RISK_DAYS;
+}
+function reviewItems(){
+  const out = [];
+  state.data.decisions.forEach(d => { if(decisionStale(d)) out.push({kind:"decision", rec:d}); });
+  state.data.risks.forEach(r => { if(riskStale(r)) out.push({kind:"risk", rec:r}); });
+  return out;
+}
+
+/* ----- Needs review ----- */
+function renderReview(m){
+  const items = reviewItems();
+  const head = `<div class="view-head"><h1>Needs review</h1><span class="sub">${items.length} item${items.length===1?"":"s"} overdue</span></div>`;
+  if(!items.length){ m.innerHTML = head + emptyState("fa-circle-check","All caught up","No decisions are past their review date and no open risks have gone stale."); return; }
+  const decs = items.filter(i=>i.kind==="decision");
+  const rks = items.filter(i=>i.kind==="risk");
+  let html = head;
+  if(decs.length){
+    html += `<div class="review-group"><h2>Decisions due for review (${decs.length})</h2><table class="list"><tbody>`;
+    decs.forEach(({rec:d}) => {
+      const why = parseReviewDate(d)!==null ? "review date passed" : `not updated in ${Math.floor(daysSince(d.updatedAt))}d`;
+      html += `<tr class="row" data-id="${esc(d.id)}" data-kind="decision" tabindex="0" role="button" aria-label="${esc(d.id)} ${esc(d.title)}">
+        <td><span class="rec-id">${esc(d.id)}</span></td>
+        <td><div class="rec-title">${esc(d.title)}</div><div class="rec-meta">${why}${d.reviewBy?" · review by "+esc(d.reviewBy):""}</div></td>
+        <td class="col-status">${decisionBadge(d.status)} <span class="badge b-stale"><i class="fa-solid fa-bell"></i>Stale</span></td>
+        <td class="col-owner">${esc(d.decidedBy||"—")}</td></tr>`;
+    });
+    html += "</tbody></table></div>";
+  }
+  if(rks.length){
+    html += `<div class="review-group"><h2>Risks gone stale (${rks.length})</h2><div class="risk-list">`;
+    rks.forEach(({rec:r}) => { const sc=riskScore(r);
+      html += `<div class="risk-row" data-id="${esc(r.id)}" data-kind="risk" tabindex="0" role="button">
+        <span class="risk-dot" style="background:${scoreColor(sc)}"></span><span class="rid">${esc(r.id)}</span>
+        <span class="rtitle">${esc(r.title)} ${riskBadge(r.status)}</span>
+        <span class="rscore">not updated ${Math.floor(daysSince(r.updatedAt))}d</span>
+        <span class="rowner ${r.owner?"":"noowner"}">${r.owner?esc(r.owner):"no owner ⚠"}</span></div>`;
+    });
+    html += "</div></div>";
+  }
+  m.innerHTML = html;
+  m.querySelectorAll('tr.row[data-kind="decision"]').forEach(tr => { const go=()=>openDecisionDetail(tr.dataset.id); tr.onclick=go; tr.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go();}}; });
+  m.querySelectorAll('.risk-row[data-kind="risk"]').forEach(row => { const go=()=>openRiskModal(findRisk(row.dataset.id)); row.onclick=go; row.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go();}}; });
+}
+
+/* ----- Decision timeline (supersede lineage) ----- */
+function renderTimeline(m){
+  const head = `<div class="view-head"><h1>Decision timeline</h1><span class="sub">how the architecture evolved — supersede chains</span></div>`;
+  const decisions = state.data.decisions;
+  if(!decisions.length){ m.innerHTML = head + emptyState("fa-timeline","No decisions yet","Record decisions and link supersedes to build a history of how the architecture changed."); return; }
+  // roots = decisions nobody supersedes that aren't superseding within a chain head; build chains by following supersededBy
+  const byId = new Map(decisions.map(d=>[d.id,d]));
+  const isChainStart = d => !d.supersedes || !byId.has(d.supersedes);
+  const chains = [];
+  const consumed = new Set();   // a decision belongs to exactly one chain
+  decisions.filter(isChainStart).forEach(start => {
+    if (consumed.has(start.id)) return;
+    const chain = []; let cur = start; const seen = new Set();
+    while(cur && !seen.has(cur.id) && !consumed.has(cur.id)){ seen.add(cur.id); consumed.add(cur.id); chain.push(cur); cur = cur.supersededBy ? byId.get(cur.supersededBy) : null; }
+    if (chain.length) chains.push(chain);
+  });
+  // any decision not reached above (e.g. inconsistent supersededBy cross-links) gets its own chain
+  decisions.forEach(d => { if(!consumed.has(d.id)){ consumed.add(d.id); chains.push([d]); } });
+  // sort chains by most-recent decidedAt desc; standalone (len 1) after multi-link chains
+  chains.sort((a,b)=>{ const la=a.length>1?0:1, lb=b.length>1?0:1; if(la!==lb) return la-lb;
+    return (b[b.length-1].decidedAt||"").localeCompare(a[a.length-1].decidedAt||""); });
+  let html = head;
+  chains.forEach(chain => {
+    html += `<div class="lineage">`;
+    chain.forEach((d,idx) => {
+      const sup = d.status==="Superseded";
+      html += `<div class="tl-item ${sup?"sup":""}" data-id="${esc(d.id)}" tabindex="0" role="button" aria-label="${esc(d.id)} ${esc(d.title)}">
+        <div class="tl-title ${sup?"struck":""}">${esc(d.id)} — ${esc(d.title)}</div>
+        <div class="tl-meta">${esc(d.status)}${d.decidedAt?" · "+esc(d.decidedAt):""}${d.decidedBy?" · "+esc(d.decidedBy):""}</div></div>`;
+      if(idx < chain.length-1) html += `<div class="tl-arrow"><i class="fa-solid fa-arrow-down"></i> superseded by</div>`;
+    });
+    html += `</div>`;
+  });
+  m.innerHTML = html;
+  m.querySelectorAll(".tl-item").forEach(el => { const go=()=>openDecisionDetail(el.dataset.id); el.onclick=go; el.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go();}}; });
+}
+
+/* ----- Risk trend ----- */
+function getSnapshots(){ if(!Array.isArray(state.data.snapshots)) state.data.snapshots = []; return state.data.snapshots; }
+function snapshotRegister(silent){
+  const open = state.data.risks.filter(r=>r.status!=="Closed");
+  const snap = { ts:new Date().toISOString(),
+    total:state.data.risks.length, open:open.length,
+    high:open.filter(r=>riskScore(r)>=15).length,
+    sumScore:open.reduce((a,r)=>a+riskScore(r),0) };
+  const snaps = getSnapshots();
+  // de-dupe same-day snapshots (keep latest that day)
+  const day = snap.ts.slice(0,10);
+  const i = snaps.findIndex(x=>x.ts.slice(0,10)===day);
+  if(i>=0) snaps[i]=snap; else snaps.push(snap);
+  snaps.sort((a,b)=>a.ts.localeCompare(b.ts));
+  if(!silent){ persist(); markDirty(); toast("Risk register snapshot saved","ok"); render(); }
+}
+function renderTrend(m){
+  const snaps = getSnapshots();
+  const open = state.data.risks.filter(r=>r.status!=="Closed");
+  const curHigh = open.filter(r=>riskScore(r)>=15).length;
+  const curSum = open.reduce((a,r)=>a+riskScore(r),0);
+  const head = `<div class="view-head"><h1>Risk trend</h1><span class="sub">${snaps.length} snapshot${snaps.length===1?"":"s"}</span>
+    <div class="actions"><button class="btn" id="t-snap"><i class="fa-solid fa-camera"></i> Snapshot now</button></div></div>`;
+  let html = head + `<div class="trend-kpis">
+    <div class="kpi"><div class="v">${open.length}</div><div class="l">Open risks</div></div>
+    <div class="kpi"><div class="v" style="color:${curHigh?'var(--crit)':'var(--text)'}">${curHigh}</div><div class="l">High (score ≥15)</div></div>
+    <div class="kpi"><div class="v">${curSum}</div><div class="l">Total score</div></div></div>`;
+  if(snaps.length < 2){
+    html += `<div class="trend-chart"><p class="trend-empty">Take at least two snapshots (on different days) to see a trend. Snapshot the register periodically — e.g. each sprint — to track whether total risk is climbing or falling.</p></div>`;
+  } else {
+    html += `<div class="trend-chart">${sparkline(snaps)}</div>`;
+  }
+  m.innerHTML = html;
+  $("t-snap").onclick = () => snapshotRegister(false);
+}
+function sparkline(snaps){
+  const W=700,H=240,P=34;
+  const xs = snaps.map((_,i)=> P + i*(W-2*P)/Math.max(1,snaps.length-1));
+  const maxScore = Math.max(...snaps.map(s=>s.sumScore), 10);
+  const maxHigh = Math.max(...snaps.map(s=>s.high), 1);
+  const yScore = v => H-P - (v/maxScore)*(H-2*P);
+  const path = snaps.map((s,i)=>`${i?"L":"M"}${xs[i].toFixed(1)},${yScore(s.sumScore).toFixed(1)}`).join(" ");
+  const highPath = snaps.map((s,i)=>`${i?"L":"M"}${xs[i].toFixed(1)},${(H-P-(s.high/maxHigh)*(H-2*P)).toFixed(1)}`).join(" ");
+  let dots = snaps.map((s,i)=>`<circle cx="${xs[i].toFixed(1)}" cy="${yScore(s.sumScore).toFixed(1)}" r="3.5" fill="#38BDF8"/>`).join("");
+  let labels = snaps.map((s,i)=> (i===0||i===snaps.length-1||snaps.length<=6) ? `<text x="${xs[i].toFixed(1)}" y="${H-10}" fill="#6b7d99" font-size="10" text-anchor="middle">${s.ts.slice(5,10)}</text>` : "").join("");
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Risk total-score trend over ${snaps.length} snapshots" style="overflow:visible">
+    <line x1="${P}" y1="${H-P}" x2="${W-P}" y2="${H-P}" stroke="#1f2c44"/>
+    <path d="${path}" fill="none" stroke="#38BDF8" stroke-width="2"/>
+    <path d="${highPath}" fill="none" stroke="#F87171" stroke-width="1.6" stroke-dasharray="4 3"/>
+    ${dots}${labels}
+    <text x="${P}" y="18" fill="#9fb0c9" font-size="11">Total score (solid) &amp; high-risk count (red dashed)</text>
+  </svg>`;
+}
+
+/* ----- Quick add ----- */
+function openQuickAdd(){
+  const body = `
+    <div class="field"><label>What are you adding?</label>
+      <select id="q-kind"><option value="decision">Decision (ADR)</option><option value="risk">Risk</option></select></div>
+    <div class="field"><label>Title</label><input type="text" id="q-title" placeholder="One line — the rest can be filled in later"></div>
+    <div class="field" id="q-extra"></div>
+    <p class="hint" style="color:var(--muted);font-size:11.5px">Tip: capture it now in two minutes; open the record later to add context, options and consequences.</p>`;
+  openModal("Quick add", body, () => {
+    const kind = $("q-kind").value;
+    const title = $("q-title").value.trim();
+    if(!title){ toast("Title is required","err"); return; }
+    if(kind==="decision"){
+      const rec = { id:nextId("ADR",state.data.decisions), title, status:"Proposed", decidedBy:(localStorage.getItem(EDITOR_NAME_KEY)||""),
+        context:"", options:[], decision:$("q-extra-val")?$("q-extra-val").value.trim():"", consequences:"", supersedes:"", reviewBy:"", tags:[], relatedRisks:[],
+        decidedAt:new Date().toISOString().slice(0,10), updatedAt:new Date().toISOString() };
+      state.data.decisions.push(rec); afterMutate(); closeModal(); toast("Decision "+rec.id+" added — open it to add detail","ok");
+    } else {
+      const rec = { id:nextId("RISK",state.data.risks), title, status:"Open",
+        likelihood:+( $("q-like")?$("q-like").value:3 ), impact:+( $("q-impact")?$("q-impact").value:3 ),
+        description:"", mitigation:"", owner:"", tags:[], relatedDecisions:[], updatedAt:new Date().toISOString() };
+      state.data.risks.push(rec); afterMutate(); closeModal(); toast("Risk "+rec.id+" added — open it to add detail","ok");
+    }
+  });
+  const kindSel = $("q-kind"); const extra = $("q-extra");
+  const renderExtra = () => {
+    if(kindSel.value==="decision"){
+      extra.innerHTML = `<label>Decision (optional)</label><input type="text" id="q-extra-val" placeholder="What was decided, in a sentence">`;
+    } else {
+      const sc = (id)=>{ let o=""; for(let n=1;n<=5;n++) o+=`<option value="${n}" ${n===3?"selected":""}>${n}</option>`; return `<select id="${id}">${o}</select>`; };
+      extra.innerHTML = `<div class="field-row"><div class="field"><label>Likelihood</label>${sc("q-like")}</div><div class="field"><label>Impact</label>${sc("q-impact")}</div></div>`;
+    }
+  };
+  kindSel.onchange = renderExtra; renderExtra();
+}
+
+/* ----- ATO / audit package ----- */
+function exportAto(){
+  const D = state.data.decisions, R = state.data.risks;
+  const accepted = D.filter(d=>d.status==="Accepted").sort((a,b)=>a.id.localeCompare(b.id));
+  const openR = R.filter(r=>r.status!=="Closed").sort((a,b)=>riskScore(b)-riskScore(a));
+  const high = openR.filter(r=>riskScore(r)>=15);
+  const today = new Date().toISOString().slice(0,10);
+  let s = `# Architecture & Risk Package\n\nGenerated ${today}${state.fileName?" from "+state.fileName:""}\n\n`;
+  s += `## Summary\n\n- Decisions of record: ${accepted.length} accepted (${D.length} total)\n- Open risks: ${openR.length} (${high.length} high, score ≥15)\n- Total open risk score: ${openR.reduce((a,r)=>a+riskScore(r),0)}\n\n`;
+  if(high.length){
+    s += `## Open high risks (action required)\n\n| ID | Risk | Score | Owner | Mitigation |\n|----|------|-------|-------|------------|\n`;
+    high.forEach(r=>{ s += `| ${r.id} | ${cell(r.title)} | ${riskScore(r)} | ${r.owner?cell(r.owner):"**UNASSIGNED**"} | ${cell(r.mitigation||"—")} |\n`; });
+    s += "\n";
+  }
+  s += `## Risk register (all open)\n\n| ID | Risk | L | I | Score | Status | Owner |\n|----|------|---|---|-------|--------|-------|\n`;
+  openR.forEach(r=>{ s += `| ${r.id} | ${cell(r.title)} | ${r.likelihood||0} | ${r.impact||0} | ${riskScore(r)} | ${r.status} | ${cell(r.owner||"—")} |\n`; });
+  s += `\n## Decisions of record\n\n`;
+  accepted.forEach(d => { s += decisionToMd(d) + "\n"; });
+  const superseded = D.filter(d=>d.status==="Superseded");
+  if(superseded.length){ s += `## Superseded decisions (history)\n\n`; superseded.sort((a,b)=>a.id.localeCompare(b.id)).forEach(d=>{ s += `- ${d.id}: ${d.title}${d.supersededBy?" → superseded by "+d.supersededBy:""}\n`; }); s+="\n"; }
+  downloadBlob(s, "audit-ato-package.md", "text/markdown");
+  toast("Audit / ATO package exported","ok");
+}
+function cell(v){ return String(v==null?"":v).replace(/\|/g,"\\|").replace(/\n/g," "); }
+
+/* ----- Saved views (filters + current view, stored in file) ----- */
+function getSavedViews(){ if(!Array.isArray(state.data.savedViews)) state.data.savedViews = []; return state.data.savedViews; }
+function saveCurrentView(){
+  const name = (prompt('Name this view (e.g. "Open high security risks"):',"")||"").trim();
+  if(!name) return;
+  getSavedViews().push({ id:uid("sv"), name, view:state.view,
+    statusFilter:[...state.statusFilter], tagFilter:[...state.tagFilter], search:state.search });
+  persist(); markDirty(); renderSavedViews(); toast('View "'+name+'" saved',"ok");
+}
+function applySavedView(id){
+  const v = getSavedViews().find(x=>x.id===id); if(!v) return;
+  const KNOWN = ["decisions","risks","matrix","trend","timeline","review","superseded"];
+  state.view = KNOWN.includes(v.view) ? v.view : "decisions";
+  state.statusFilter = new Set(v.statusFilter||[]);
+  state.tagFilter = new Set(v.tagFilter||[]);
+  state.search = v.search || "";
+  const sb = $("search"); if(sb) sb.value = state.search;
+  render();
+}
+function deleteSavedView(id){ state.data.savedViews = getSavedViews().filter(x=>x.id!==id); persist(); markDirty(); renderSavedViews(); }
+function renderSavedViews(){
+  const box = $("saved-views"); if(!box) return;
+  const vs = getSavedViews();
+  if(!vs.length){ box.innerHTML = '<div class="sv-empty">None yet. Filter, then "Save view".</div>' +
+    '<div class="sv-item" id="sv-add" tabindex="0" role="button" style="color:var(--accent)"><i class="fa-solid fa-plus"></i> Save current view</div>';
+  } else {
+    box.innerHTML = vs.map(v=>`<div class="sv-item" data-id="${esc(v.id)}" tabindex="0" role="button"><i class="fa-solid fa-bookmark" aria-hidden="true"></i><span class="sv-name">${esc(v.name)}</span><i class="fa-solid fa-xmark sv-del" data-del="${esc(v.id)}" aria-label="Delete view"></i></div>`).join("")
+      + '<div class="sv-item" id="sv-add" tabindex="0" role="button" style="color:var(--accent)"><i class="fa-solid fa-plus"></i> Save current view</div>';
+  }
+  box.querySelectorAll(".sv-item[data-id]").forEach(el => {
+    el.onclick = e => { if(e.target.dataset.del){ deleteSavedView(e.target.dataset.del); } else applySavedView(el.dataset.id); };
+    el.onkeydown = e => { if(e.key==="Enter"||e.key===" "){ e.preventDefault(); applySavedView(el.dataset.id); } };
+  });
+  const add = $("sv-add"); if(add){ add.onclick = saveCurrentView; add.onkeydown = e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); saveCurrentView(); } }; }
+}
+
+/* ----- Deep links (hash to a record within the loaded file) ----- */
+function applyHash(){
+  const h = location.hash.replace(/^#/,"");
+  if(!h) return;
+  const m = /^(decision|risk)=(.+)$/.exec(h);
+  if(!m) return;
+  if(m[1]==="decision" && findDecision(m[2])) openDecisionDetail(m[2]);
+  else if(m[1]==="risk" && findRisk(m[2])){ state.view="risks"; render(); openRiskModal(findRisk(m[2])); }
+}
+
+function wireUp(){
+  function setView(v){ state.view = v; state.matrixCell = null; state.statusFilter.clear(); render(); }
+  document.querySelectorAll(".nav-item").forEach(n => {
+    n.onclick = () => setView(n.dataset.view);
+    n.onkeydown = e => { if (e.key === "Enter" || e.key === " "){ e.preventDefault(); setView(n.dataset.view); } };
+  });
+  $("search").addEventListener("input", e => { state.search = e.target.value.trim(); render(); });
+  $("btn-open").onclick = openFile;
+  $("btn-save").onclick = saveFile;
+  $("btn-export-md").onclick = exportAllMd;
+  $("btn-export-csv").onclick = exportCsv;
+  $("btn-sample").onclick = () => { if (confirm("Replace current data with sample data? Unsaved changes will be lost.")){ state.data = SAMPLE_DATA(); normalize(); state.fileName=null; persist(); markDirty(); render(); toast("Sample data loaded","ok"); } };
+  $("btn-help").onclick = openHelp;
+  $("btn-quick").onclick = openQuickAdd;
+  $("btn-print").onclick = () => window.print();
+  $("btn-ato").onclick = exportAto;
+  $("btn-snapshot").onclick = () => snapshotRegister(false);
+  $("file-chip").onclick = () => state.fileName || state.dirty ? saveFile() : openFile();
+  $("modal-close").onclick = closeModal;
+  $("modal-cancel").onclick = closeModal;
+  $("modal-backdrop").onclick = e => { if (e.target === $("modal-backdrop")) closeModal(); };
+  $("file-input").onchange = e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => { try { applyLoaded(JSON.parse(r.result), f.name); } catch(err){ toast("Invalid JSON","err"); } }; r.readAsText(f); };
+  document.addEventListener("keydown", e => {
+    const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName);
+    const modalOpen = $("modal-backdrop").classList.contains("open");
+    if (e.key === "Escape"){ if (modalOpen) closeModal(); }
+    if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="s"){ e.preventDefault(); saveFile(); }
+    if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="o"){ e.preventDefault(); openFile(); }
+    if (!typing && !modalOpen && !e.ctrlKey && !e.metaKey && (e.key==="q"||e.key==="Q")) openQuickAdd();
+  });
+  window.addEventListener("hashchange", applyHash);
+  window.addEventListener("beforeunload", e => { if (state.dirty){ e.preventDefault(); e.returnValue=""; } });
+}
+function openHelp(){
+  const body = `
+    <div style="font-size:13.5px; color:var(--text-2); line-height:1.6">
+      <p><strong style="color:var(--text)">What this is.</strong> A local-only log of architecture decisions (ADRs) and risks. One JSON file is the source of truth — email it, drop it on a share, double-click to open. Nothing leaves your machine.</p>
+      <p><strong style="color:var(--text)">Decisions.</strong> Capture context, options, the choice and its consequences. Mark one option chosen with a trailing <code>*</code>. Link a decision to the one it <em>supersedes</em> — the old one is auto-marked Superseded and a back-link is created, giving you a history of how the architecture evolved.</p>
+      <p><strong style="color:var(--text)">Risks.</strong> Score = likelihood × impact (1–5 each). The heat-map plots open risks; click a cell to filter. The list sorts by score so the worst, and any with no owner, surface first.</p>
+      <p><strong style="color:var(--text)">Saving.</strong> Chrome/Edge save in place to your file; other browsers download a copy. Every change is also cached to localStorage as a safety net.</p>
+      <p><strong style="color:var(--text)">Shortcuts.</strong> Ctrl+S save · Ctrl+O open · Esc close dialog.</p>
+    </div>`;
+  $("modal-title").textContent = "Help";
+  $("modal-body").innerHTML = body;
+  $("modal-foot").innerHTML = "";
+  const close = document.createElement("button"); close.className="btn primary"; close.textContent="Got it"; close.onclick=closeModal;
+  $("modal-foot").appendChild(close);
+  $("modal-backdrop").classList.add("open");
+}
+function boot(){
+  loadInitial();
+  if(!Array.isArray(state.data.snapshots)) state.data.snapshots = [];
+  if(!Array.isArray(state.data.savedViews)) state.data.savedViews = [];
+  wireUp();
+  render();
+  markClean();
+  applyHash();
+}
+boot();
+</script>
+</body>
+</html>

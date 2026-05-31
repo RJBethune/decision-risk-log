@@ -1,0 +1,26 @@
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary
+*.tmp
+*.bak
+*~
+
+# Local working files (don't commit real decision/risk data)
+my-*.json
+private-*.json
+local-*.json
+
+# Decision/risk log exports — keep local-only by default to avoid committing
+# real organizational decisions or risk data
+decision-risk-log*.json
