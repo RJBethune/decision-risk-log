@@ -13,7 +13,7 @@
   :root{
     --bg:#0B1220; --panel:#0E1729; --card:#111c30; --card-2:#16223a;
     --border:#1f2c44; --border-strong:#2b3a57;
-    --text:#E6EDF7; --text-2:#9fb0c9; --muted:#6b7d99;
+    --text:#E6EDF7; --text-2:#9fb0c9; --muted:#7d8ea8;
     --accent:#38BDF8; --accent-2:#7DD3FC; --accent-3:#0ea5e9;
     --ok:#34D399; --warn:#FBBF24; --crit:#F87171;
     --shadow-2:0 10px 30px rgba(0,0,0,0.35); --radius:14px; --radius-sm:9px;
@@ -26,6 +26,13 @@
     font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased;
   }
   button,input,select,textarea{font-family:inherit; color:inherit}
+  /* themed scrollbars so textareas and panels match the dark UI */
+  *{scrollbar-width:thin; scrollbar-color:var(--border-strong) transparent}
+  ::-webkit-scrollbar{width:11px; height:11px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:var(--border-strong); border-radius:8px; border:3px solid var(--panel)}
+  ::-webkit-scrollbar-thumb:hover{background:#3a4d70}
+  textarea::-webkit-scrollbar-thumb{border-color:var(--card)}
   ::selection{background:rgba(56,189,248,0.35)}
   a{color:var(--accent-2)}
 
